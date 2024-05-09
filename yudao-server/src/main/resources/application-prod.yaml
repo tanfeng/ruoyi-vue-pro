@@ -41,13 +41,13 @@ spring:
       datasource:
         master:
           name: ruoyi-vue-pro
-          url: jdbc:mysql://127.0.0.1:3306/${spring.datasource.dynamic.datasource.master.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
+          url: jdbc:mysql://119.28.73.38:3306/${spring.datasource.dynamic.datasource.master.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
           driver-class-name: com.mysql.jdbc.Driver
           username: root
           password: CgLf7R8_Wb9ga-s
         slave: # 模拟从库，可根据自己需要修改 # 模拟从库，可根据自己需要修改
           name: ruoyi-vue-pro
-          url: jdbc:mysql://127.0.0.1:3306/${spring.datasource.dynamic.datasource.master.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
+          url: jdbc:mysql://119.28.73.38:3306/${spring.datasource.dynamic.datasource.master.name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true # MySQL Connector/J 8.X 连接的示例
           driver-class-name: com.mysql.jdbc.Driver
           username: root
           password: CgLf7R8_Wb9ga-s
@@ -173,8 +173,8 @@ yudao:
       - ${spring.boot.admin.context-path}/** # 不处理 Spring Boot Admin 的请求
       - ${management.endpoints.web.base-path}/** # 不处理 Actuator 的请求
   pay:
-    order-notify-url: https://www.pyberclub.com/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
-    refund-notify-url: https://www.pyberclub.com/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址
+    order-notify-url: http://wdd92z.natappfree.cc/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
+    refund-notify-url: http://wdd92z.natappfree.cc/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址
   demo: false # 开启演示模式
   tencent-lbs-key: TVDBZ-TDILD-4ON4B-PFDZA-RNLKH-VVF6E # QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
 
@@ -189,7 +189,7 @@ justauth:
       client-id: wwd411c69a39ad2e54
       client-secret: 1wTb7hYxnpT2TUbIeHGXGo7T0odav1ic10mLdyyATOw
       agent-id: 1000004
-      ignore-check-redirect-uri: true    
+      ignore-check-redirect-uri: true
     WECHAT_MINI_APP: # 微信小程序
       client-id: ${wx.miniapp.appid}
       client-secret: ${wx.miniapp.secret}

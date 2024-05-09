@@ -49,6 +49,8 @@ public class PayOrderExtensionDO extends BaseDO {
      * 关联 {@link PayOrderDO#getId()}
      */
     private Long orderId;
+
+    private String paymentId;
     /**
      * 渠道编号
      *

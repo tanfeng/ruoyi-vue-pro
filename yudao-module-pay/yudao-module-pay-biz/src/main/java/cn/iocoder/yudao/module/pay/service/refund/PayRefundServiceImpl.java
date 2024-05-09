@@ -15,7 +15,9 @@ import cn.iocoder.yudao.module.pay.convert.refund.PayRefundConvert;
 import cn.iocoder.yudao.module.pay.dal.dataobject.app.PayAppDO;
 import cn.iocoder.yudao.module.pay.dal.dataobject.channel.PayChannelDO;
 import cn.iocoder.yudao.module.pay.dal.dataobject.order.PayOrderDO;
+import cn.iocoder.yudao.module.pay.dal.dataobject.order.PayOrderExtensionDO;
 import cn.iocoder.yudao.module.pay.dal.dataobject.refund.PayRefundDO;
+import cn.iocoder.yudao.module.pay.dal.mysql.order.PayOrderExtensionMapper;
 import cn.iocoder.yudao.module.pay.dal.mysql.refund.PayRefundMapper;
 import cn.iocoder.yudao.module.pay.dal.redis.no.PayNoRedisDAO;
 import cn.iocoder.yudao.module.pay.enums.notify.PayNotifyTypeEnum;
@@ -64,6 +66,9 @@ public class PayRefundServiceImpl implements PayRefundService {
     private PayChannelService channelService;
     @Resource
     private PayNotifyService notifyService;
+
+    @Resource
+    private PayOrderExtensionMapper payOrderExtensionMapper;
 
     @Override
     public PayRefundDO getRefund(Long id) {
@@ -132,6 +137,9 @@ public class PayRefundServiceImpl implements PayRefundService {
                     .setOutRefundNo(refund.getNo())
                     .setNotifyUrl(genChannelRefundNotifyUrl(channel))
                     .setReason(reqDTO.getReason());
+            // 增加paymentid
+            PayOrderExtensionDO payOrderExtensionDO = payOrderExtensionMapper.selectByNo(refund.getOrderNo());
+            unifiedReqDTO.setPaymentId(payOrderExtensionDO.getPaymentId());
             PayRefundRespDTO refundRespDTO = client.unifiedRefund(unifiedReqDTO);
             // 2.3 处理退款返回
             getSelf().notifyRefund(channel, refundRespDTO);

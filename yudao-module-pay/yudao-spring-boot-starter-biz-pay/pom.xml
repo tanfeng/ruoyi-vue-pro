@@ -22,6 +22,12 @@
             <artifactId>yudao-common</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.alphapay.sdk</groupId>
+            <artifactId>openapi-sdk-java</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+
         <!-- Spring 核心 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

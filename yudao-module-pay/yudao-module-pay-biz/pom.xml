@@ -19,6 +19,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.alphapay.sdk</groupId>
+            <artifactId>openapi-sdk-java</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+        <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-module-pay-api</artifactId>
             <version>${revision}</version>

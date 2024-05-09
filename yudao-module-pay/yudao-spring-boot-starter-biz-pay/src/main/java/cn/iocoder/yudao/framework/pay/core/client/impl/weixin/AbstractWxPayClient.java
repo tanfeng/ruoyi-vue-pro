@@ -17,12 +17,14 @@ import cn.iocoder.yudao.framework.pay.core.client.dto.transfer.PayTransferUnifie
 import cn.iocoder.yudao.framework.pay.core.client.impl.AbstractPayClient;
 import cn.iocoder.yudao.framework.pay.core.enums.order.PayOrderStatusRespEnum;
 import cn.iocoder.yudao.framework.pay.core.enums.transfer.PayTransferTypeEnum;
+import com.alibaba.fastjson.JSONObject;
 import com.github.binarywang.wxpay.bean.notify.WxPayNotifyV3Result;
-import com.github.binarywang.wxpay.bean.notify.WxPayOrderNotifyResult;
-import com.github.binarywang.wxpay.bean.notify.WxPayRefundNotifyResult;
 import com.github.binarywang.wxpay.bean.notify.WxPayRefundNotifyV3Result;
 import com.github.binarywang.wxpay.bean.request.*;
-import com.github.binarywang.wxpay.bean.result.*;
+import com.github.binarywang.wxpay.bean.result.WxPayOrderQueryV3Result;
+import com.github.binarywang.wxpay.bean.result.WxPayRefundQueryResult;
+import com.github.binarywang.wxpay.bean.result.WxPayRefundQueryV3Result;
+import com.github.binarywang.wxpay.bean.result.WxPayRefundV3Result;
 import com.github.binarywang.wxpay.config.WxPayConfig;
 import com.github.binarywang.wxpay.exception.WxPayException;
 import com.github.binarywang.wxpay.service.WxPayService;
@@ -166,13 +168,14 @@ public abstract class AbstractWxPayClient extends AbstractPayClient<WxPayClientC
 
     private PayOrderRespDTO doParseOrderNotifyV2(String body) throws WxPayException {
         // 1. 解析回调
-        WxPayOrderNotifyResult response = client.parseOrderNotifyResult(body);
+        JSONObject jsonObject = JSONObject.parseObject(body);
+        // WxPayOrderNotifyResult response = client.parseOrderNotifyResult(body);
         // 2. 构建结果
         // V2 微信支付的回调，只有 SUCCESS 支付成功、CLOSED 支付失败两种情况，无需像支付宝一样解析的比较复杂
-        Integer status = Objects.equals(response.getResultCode(), "SUCCESS") ?
+        Integer status = Objects.equals(jsonObject.getString("paymentStatus"), "SUCCESS") ?
                 PayOrderStatusRespEnum.SUCCESS.getStatus() : PayOrderStatusRespEnum.CLOSED.getStatus();
-        return PayOrderRespDTO.of(status, response.getTransactionId(), response.getOpenid(), parseDateV2(response.getTimeEnd()),
-                response.getOutTradeNo(), body);
+        return PayOrderRespDTO.of(status, jsonObject.getString("paymentId"), "", LocalDateTimeUtil.now(),
+                jsonObject.getString("paymentRequestId"), body);
     }
 
     private PayOrderRespDTO doParseOrderNotifyV3(String body) throws WxPayException {
@@ -209,16 +212,18 @@ public abstract class AbstractWxPayClient extends AbstractPayClient<WxPayClientC
     }
 
     private PayOrderRespDTO doGetOrderV2(String outTradeNo) throws WxPayException {
+        // ai支付,主动查询结果
         // 构建 WxPayUnifiedOrderRequest 对象
-        WxPayOrderQueryRequest request = WxPayOrderQueryRequest.newBuilder()
-                .outTradeNo(outTradeNo).build();
+/*        WxPayOrderQueryRequest request = WxPayOrderQueryRequest.newBuilder()
+                .outTradeNo(outTradeNo).build();*/
         // 执行请求
-        WxPayOrderQueryResult response = client.queryOrder(request);
+        return AiPayUtil.inquiryPayment(outTradeNo);
+        // WxPayOrderQueryResult response = client.queryOrder(request);
 
-        // 转换结果
+/*        // 转换结果
         Integer status = parseStatus(response.getTradeState());
         return PayOrderRespDTO.of(status, response.getTransactionId(), response.getOpenid(), parseDateV2(response.getTimeEnd()),
-                outTradeNo, response);
+                outTradeNo, response);*/
     }
 
     private PayOrderRespDTO doGetOrderV3(String outTradeNo) throws WxPayException {
@@ -270,10 +275,11 @@ public abstract class AbstractWxPayClient extends AbstractPayClient<WxPayClientC
             String errorCode = getErrorCode(e);
             String errorMessage = getErrorMessage(e);
             return PayRefundRespDTO.failureOf(errorCode, errorMessage,
-                    reqDTO.getOutTradeNo(), e.getXmlString());
+                    reqDTO.getOutRefundNo(), e.getXmlString());
         }
     }
 
+    // ai退款
     private PayRefundRespDTO doUnifiedRefundV2(PayRefundUnifiedReqDTO reqDTO) throws Throwable {
         // 1. 构建 WxPayRefundRequest 请求
         WxPayRefundRequest request = new WxPayRefundRequest()
@@ -284,13 +290,15 @@ public abstract class AbstractWxPayClient extends AbstractPayClient<WxPayClientC
                 .setTotalFee(reqDTO.getPayPrice())
                 .setNotifyUrl(reqDTO.getNotifyUrl());
         // 2.1 执行请求
-        WxPayRefundResult response = client.refundV2(request);
-        // 2.2 创建返回结果
+        PayRefundRespDTO refund = AiPayUtil.refund(reqDTO);
+        return refund;
+        // WxPayRefundResult response = client.refundV2(request);
+/*        // 2.2 创建返回结果
         if (Objects.equals("SUCCESS", response.getResultCode())) { // V2 情况下，不直接返回退款成功，而是等待异步通知
             return PayRefundRespDTO.waitingOf(response.getRefundId(),
                     reqDTO.getOutRefundNo(), response);
         }
-        return PayRefundRespDTO.failureOf(reqDTO.getOutRefundNo(), response);
+        return PayRefundRespDTO.failureOf(reqDTO.getOutRefundNo(), response);*/
     }
 
     private PayRefundRespDTO doUnifiedRefundV3(PayRefundUnifiedReqDTO reqDTO) throws Throwable {
@@ -328,16 +336,19 @@ public abstract class AbstractWxPayClient extends AbstractPayClient<WxPayClientC
         }
     }
 
-    private PayRefundRespDTO doParseRefundNotifyV2(String body) throws WxPayException {
+    // ai支付
+    private PayRefundRespDTO doParseRefundNotifyV2(String body){
+        JSONObject jsonObject = JSONObject.parseObject(body);
         // 1. 解析回调
-        WxPayRefundNotifyResult response = client.parseRefundNotifyResult(body);
-        WxPayRefundNotifyResult.ReqInfo result = response.getReqInfo();
+/*        WxPayRefundNotifyResult response = client.parseRefundNotifyResult(body);
+        WxPayRefundNotifyResult.ReqInfo result = response.getReqInfo();*/
         // 2. 构建结果
-        if (Objects.equals("SUCCESS", result.getRefundStatus())) {
-            return PayRefundRespDTO.successOf(result.getRefundId(), parseDateV2B(result.getSuccessTime()),
-                    result.getOutRefundNo(), response);
+        if (Objects.equals("SUCCESS", jsonObject.getString("refundStatus"))) {
+            PayRefundRespDTO payRefundRespDTO = PayRefundRespDTO.successOf(jsonObject.getString("refundRequestId"), LocalDateTimeUtil.now(),
+                    jsonObject.getString("refundRequestId"), jsonObject);
+            return payRefundRespDTO;
         }
-        return PayRefundRespDTO.failureOf(result.getOutRefundNo(), response);
+        return PayRefundRespDTO.failureOf(jsonObject.getString("refundId"), jsonObject);
     }
 
     private PayRefundRespDTO parseRefundNotifyV3(String body) throws WxPayException {

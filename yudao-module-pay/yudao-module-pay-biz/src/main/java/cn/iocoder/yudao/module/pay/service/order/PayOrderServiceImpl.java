@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.pay.service.order;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
@@ -31,6 +32,15 @@ import cn.iocoder.yudao.module.pay.framework.pay.config.PayProperties;
 import cn.iocoder.yudao.module.pay.service.app.PayAppService;
 import cn.iocoder.yudao.module.pay.service.channel.PayChannelService;
 import cn.iocoder.yudao.module.pay.service.notify.PayNotifyService;
+import com.alphapay.api.AlphaPayClient;
+import com.alphapay.api.DefaultAlphaPayClient;
+import com.alphapay.api.exception.AlphaPayApiException;
+import com.alphapay.api.model.beans.Amount;
+import com.alphapay.api.model.beans.Customer;
+import com.alphapay.api.model.beans.Order;
+import com.alphapay.api.model.beans.PaymentMethod;
+import com.alphapay.api.request.beans.CreateOrderRequest;
+import com.alphapay.api.response.beans.CreateOrderResponse;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -160,7 +170,8 @@ public class PayOrderServiceImpl implements PayOrderService {
                 // 订单相关字段
                 .setPrice(order.getPrice()).setExpireTime(order.getExpireTime());
         PayOrderRespDTO unifiedOrderResp = client.unifiedOrder(unifiedOrderReqDTO);
-
+        orderExtension.setPaymentId(unifiedOrderResp.getPaymentId());
+        orderExtensionMapper.updateById(orderExtension);
         // 4. 如果调用直接支付成功，则直接更新支付单状态为成功。例如说：付款码支付，免密支付时，就直接验证支付成功
         if (unifiedOrderResp != null) {
             getSelf().notifyOrder(channel, unifiedOrderResp);
@@ -173,6 +184,94 @@ public class PayOrderServiceImpl implements PayOrderService {
             order = orderMapper.selectById(order.getId());
         }
         return PayOrderConvert.INSTANCE.convert(order, unifiedOrderResp);
+    }
+
+    private static final String GATE_WAY_URL = "https://openapi.alphapay.ca";
+
+    private static final String privateKey2 = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCClxteJAokHgL3" +
+            "nkHz+MlJ5hMhk5faNrE1mRLtTSIfo9gOekAzkIf7ObWaWpzmhwWk1UZh+dwckon3" +
+            "RtbVswuXeN/nEimghpH7o1ZWujRz5CsD4EsduQe7Keba1Lck7td5Ad8A63RkcO3u" +
+            "BjpB8gBJ0dkn82Mk2LIsGUFuX1VXOJbDj9RD/9MOwpKdfO9KwA2jRN57O7b1D3ex" +
+            "JAaenz0kEEPRh69cw15bOuy5xR/L1Y6d0+goR6MVLjQ8sivyhrqTV2rmpB6wO1Hb" +
+            "lun/LXhhEzFmRRuM7T0VhFu3vayTGhTuD/tUu0ajLskMPb3PJmS91uGRw5ZDgrIh" +
+            "1gRtZ1GTAgMBAAECggEAGs8GkUb4xf1bQpY8l+dE+2S+HLB+BhAgRQ6NsiWZkcFD" +
+            "A4XZVDyhjdOFEpDzkOe7IuGdt1Nh+oOiyx7Bz9EX2hq4bGlwHkJCCdS4TsmfJwN6" +
+            "SStsgEeR7LxnZhkxF+XoWjEmJLwxgsUkMy8YGp2hrYXk/Kycd938hc0Rf6UWkfb+" +
+            "s7qG47uqplUJcHVYpQjpq5iRM7nxW6pbOK5fda2xdzyzi8GXTrcEr5yxvo46LJ1H" +
+            "WAiPxj3nGOpVuzyNAsMEhjk0mHraQ62LlmnKp2L/garSx4a5jG7b99X+Ip+QDBYK" +
+            "Mhq/vctBcXgPveN49EG1ny1wVWmRdmXnVSQ8ZVVrQQKBgQD/0y/g5JqwFiKmsjm6" +
+            "hDqT0hPq8NtNIB//AMzzvZpRUcuJ9wtqYkfxJ/Wmgv5clvpPGm12xMXXJPAY787R" +
+            "cOBMUFmF61VWF5RvnnHpZAELkw6ArYPv8OzWbjsQ/vkYKOkaEz6Tf0BFKsDhKJCB" +
+            "CKjHIH1fuyXu+ISsEvoIpYQisQKBgQCCrfuCm+ST2BfWzsgwgYj2qvqXvq5oIHFz" +
+            "1gXcRKo2gb1Y6somJciAI9TyRxCTlTk/CBoRqeDCB0bsWQ9+SrKCBug5qU71rp0U" +
+            "Uh//LPidRmHEDBsTRRMnnsM4+eMC71ig43oIaw7dwq9qHdcyWnAvMs/U0keEW8lv" +
+            "mrjKeAzhgwKBgC7qmSZCZogSlypBF0s4gtGnPlXg9CcR1CxdBjlRNWLigFR+BQ7u" +
+            "lUkJzghKj8GFQsSNETQt5CaPtKSuHhzU+Z2lQrXHse/HBUbvJO7rkzF/N7Krn726" +
+            "ToUI1DZKvH4MyqsoilpchPnqXFMusEmpv+I8+CE9XjiURSiVlltNl40RAoGAfOSh" +
+            "CtvJIs+VQRRR2aIDb5RLebmg4B2ZsJas9S6e6wcmGxQSbVERBf6453Cp1BL7KlWo" +
+            "7JbKG0ZvLzWTDCWB46mMSoeY0k+3CpPOxseJOG7qwz66pbkPrH8cn5ibsNNlhibC" +
+            "G8eN5r3JfobUg+hRbZqHbSQne8VpiIN79u2zidcCgYAQq1lidHGmBOUd5CLiTrN4" +
+            "DXWFRefLZuGKsNqpP8bEheXxQSk8aLaJYDmJcGrpsu9G4dCpdboFQOj7fu+HOM8Y" +
+            "iOzOoC3p5A5Wy+uu42e6GDAnqFaaarRKdGMgtxw77ZfCj71Mq62YowokhBL2ebD1" +
+            "SbRgnOc1aeSAov28RFMjdg==";
+
+    private static final String apub2 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkEO8REXYwfsfGW4lWG2c11s+ERO4KY/31o2hZS+e4Lj9DFE1KmhCVawi/Sp2wUsnPYr3PaRM4f2Di1oQV9OQ9vAwLqKkG/JhuJ4Jw5iimZiDSrpjNh9RAxjHRCpmcfImDiZ4vjro9oW7o4Dvp+smiDuv09OWs2pjasMAh+sDB30ASZDWOIutSjGPkKdOrYEinAkKUtQAQTqoZbHbnwwCCRI5RJfzFJHZdmbT4QZXemfXZqSncPNFl4uoKPDLG9niaz2LiexoPFCx2KHMzwhPHkfq3oKFQfFdK1NHFV+/bfzksC3DODIX3+GlsFkJo1vWBDlTeqIkHCTA2SQzyeyFOQIDAQAB";
+
+
+    public PayOrderSubmitRespVO submitOrder2(PayOrderSubmitReqVO reqVO, String userIp) throws AlphaPayApiException {
+        // 1.1 获得 PayOrderDO ，并校验其是否存在
+        PayOrderDO order = validateOrderCanSubmit(reqVO.getId());
+        // 1.32 校验支付渠道是否有效
+/*        PayChannelDO channel = validateChannelCanSubmit(order.getAppId(), reqVO.getChannelCode());
+        PayClient client = channelService.getPayClient(channel.getId());*/
+
+        // 2. 插入 PayOrderExtensionDO
+        String no = noRedisDAO.generate(payProperties.getOrderNoPrefix());
+        PayOrderExtensionDO orderExtension = PayOrderConvert.INSTANCE.convert(reqVO, userIp)
+                .setOrderId(order.getId()).setNo(no)
+                .setChannelId(111L).setChannelCode("mypay")
+                .setStatus(PayOrderStatusEnum.WAITING.getStatus());
+        orderExtensionMapper.insert(orderExtension);
+
+        // 3. 调用三方接口
+
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setMerchantCode("C4GH6K");
+        request.setPath("/api/v2.0/payments/pay");
+
+        request.setScenarioCode("MINI_APP");
+        String uuid = RandomUtil.randomString(32);
+        request.setPaymentRequestId(uuid);
+        Order apOrder = new Order();
+        Amount amount = new Amount();
+        amount.setValue("100");
+        amount.setCurrency("CAD");
+        apOrder.setOrderAmount(amount);
+        apOrder.setDescription("Test OFFLINE_QRCODE");
+        apOrder.setNotifyUrl("https://www.pyberclub.com/app-api/trade/order/update-paid");
+        apOrder.setRedirectUrl("https://alphapay.com/successPage");
+        request.setOrder(apOrder);
+        PaymentMethod paymentMethod = new PaymentMethod();
+        paymentMethod.setPaymentMethodType("Wechat");
+        request.setPaymentMethod(paymentMethod);
+        Customer customer = new Customer();
+        customer.setAppId("wxd521a4e3522e50f0");
+        customer.setCustomerId("oJm-a675HrYLqzSAaVtyvGaFQBow");
+        request.setCustomer(customer);
+        AlphaPayClient defaultAlphaPayClient = new DefaultAlphaPayClient(GATE_WAY_URL, privateKey2, apub2);
+        request.setKeyVersion(1);
+        CreateOrderResponse response = defaultAlphaPayClient.execute(request);
+
+        PayOrderSubmitRespVO res = new PayOrderSubmitRespVO();
+
+        // 4. 如果调用直接支付成功，则直接更新支付单状态为成功。例如说：付款码支付，免密支付时，就直接验证支付成功
+        if (res != null) {
+
+            // 此处需要读取最新的状态
+            order = orderMapper.selectById(order.getId());
+        }
+        return res;
     }
 
     private PayOrderDO validateOrderCanSubmit(Long id) {
@@ -216,7 +315,11 @@ public class PayOrderServiceImpl implements PayOrderService {
                 log.error("[validateOrderCanSubmit][渠道编号({}) 找不到对应的支付客户端]", orderExtension.getChannelId());
                 return;
             }
-            PayOrderRespDTO respDTO = payClient.getOrder(orderExtension.getNo());
+            // ai支付得用他们平台的订单id才能查询订单
+            if(orderExtension.getPaymentId() == null){
+                return;
+            }
+            PayOrderRespDTO respDTO = payClient.getOrder(orderExtension.getPaymentId());
             if (respDTO != null && PayOrderStatusRespEnum.isSuccess(respDTO.getStatus())) {
                 log.warn("[validateOrderCanSubmit][order({}) 的 PayOrderRespDTO({}) 已支付，可能是回调延迟]",
                         id, toJsonString(respDTO));

@@ -45,6 +45,8 @@ public class PayRefundUnifiedReqDTO {
     @NotEmpty(message = "退款原因不能为空")
     private String reason;
 
+    private String paymentId;
+
     /**
      * 支付金额，单位：分
      *

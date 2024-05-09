@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 /**
  * 渠道支付订单 Response DTO
  *
- * @author 芋道源码
+ * @author 久康商城
  */
 @Data
 public class PayOrderRespDTO {
@@ -28,6 +28,8 @@ public class PayOrderRespDTO {
      * 对应 PayOrderExtensionDO 的 no 字段
      */
     private String outTradeNo;
+
+    private String paymentId; // ai支付平台订单号
 
     /**
      * 支付渠道编号

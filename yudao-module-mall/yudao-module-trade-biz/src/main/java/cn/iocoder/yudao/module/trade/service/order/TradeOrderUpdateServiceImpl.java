@@ -19,6 +19,8 @@ import cn.iocoder.yudao.module.pay.api.order.dto.PayOrderRespDTO;
 import cn.iocoder.yudao.module.pay.enums.order.PayOrderStatusEnum;
 import cn.iocoder.yudao.module.product.api.comment.ProductCommentApi;
 import cn.iocoder.yudao.module.product.api.comment.dto.ProductCommentCreateReqDTO;
+import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
+import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderDeliveryReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderRemarkReqVO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderUpdateAddressReqVO;
@@ -56,10 +58,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.*;
@@ -107,6 +107,9 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     @Resource
     private TradeOrderProperties tradeOrderProperties;
 
+    @Resource
+    private ProductSpuApi spuApi;
+
     // =================== Order ===================
 
     @Override
@@ -121,7 +124,16 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
         TradePriceCalculateRespBO calculateRespBO = calculatePrice(userId, settlementReqVO);
 
         // 3. 拼接返回
-        return TradeOrderConvert.INSTANCE.convert(calculateRespBO, address);
+        AppTradeOrderSettlementRespVO convert = TradeOrderConvert.INSTANCE.convert(calculateRespBO, address);
+        List<AppTradeOrderSettlementRespVO.Item> items = convert.getItems();
+
+        List<ProductSpuRespDTO> spuList = spuApi.getSpuList(convertSet(items, AppTradeOrderSettlementRespVO.Item::getSpuId));
+        Map<Long, String> picMap = spuList.stream().collect(
+                Collectors.toMap(ProductSpuRespDTO::getId, ProductSpuRespDTO::getPicUrl, (value1, value2) -> value1));
+        for (AppTradeOrderSettlementRespVO.Item item : items) {
+            item.setPicUrl(picMap.get(item.getSpuId()));
+        }
+        return convert;
     }
 
     /**
@@ -208,6 +220,13 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
 
     private List<TradeOrderItemDO> buildTradeOrderItems(TradeOrderDO tradeOrderDO,
                                                         TradePriceCalculateRespBO calculateRespBO) {
+        List<TradePriceCalculateRespBO.OrderItem> items = calculateRespBO.getItems();
+        List<ProductSpuRespDTO> spuList = spuApi.getSpuList(convertSet(items, TradePriceCalculateRespBO.OrderItem::getSpuId));
+        Map<Long, String> picMap = spuList.stream().collect(
+                Collectors.toMap(ProductSpuRespDTO::getId, ProductSpuRespDTO::getPicUrl, (value1, value2) -> value1));
+        for (TradePriceCalculateRespBO.OrderItem item : items) {
+            item.setPicUrl(picMap.get(item.getSpuId()));
+        }
         return TradeOrderConvert.INSTANCE.convertList(tradeOrderDO, calculateRespBO);
     }
 

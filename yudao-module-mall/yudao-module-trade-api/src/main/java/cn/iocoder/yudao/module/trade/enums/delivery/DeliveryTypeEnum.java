@@ -16,7 +16,9 @@ import java.util.Arrays;
 public enum DeliveryTypeEnum implements IntArrayValuable {
 
     EXPRESS(1, "快递发货"),
-    PICK_UP(2, "用户自提"),;
+    PICK_UP(2, "用户自提"),
+    NOT_HAVE(3, "无需发货"),
+    ;
 
     public static final int[] ARRAYS = Arrays.stream(values()).mapToInt(DeliveryTypeEnum::getType).toArray();
 

@@ -259,11 +259,17 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
         KeyValue<TradeOrderDO, PayOrderRespDTO> orderResult = validateOrderPayable(id, payOrderId);
         TradeOrderDO order = orderResult.getKey();
         PayOrderRespDTO payOrder = orderResult.getValue();
-
-        // 2. 更新 TradeOrderDO 状态为已支付，等待发货
-        int updateCount = tradeOrderMapper.updateByIdAndStatus(id, order.getStatus(),
-                new TradeOrderDO().setStatus(TradeOrderStatusEnum.UNDELIVERED.getStatus()).setPayStatus(true)
-                        .setPayTime(LocalDateTime.now()).setPayChannelCode(payOrder.getChannelCode()));
+        int updateCount = 0;
+        // 2. 更新 TradeOrderDO 状态为已支付，等待发货 （虚拟订单更新状态为已完成）
+        if(DeliveryTypeEnum.NOT_HAVE.getType().equals(order.getDeliveryType())){
+            updateCount = tradeOrderMapper.updateByIdAndStatus(id, order.getStatus(),
+                    new TradeOrderDO().setStatus(TradeOrderStatusEnum.COMPLETED.getStatus()).setPayStatus(true)
+                            .setPayTime(LocalDateTime.now()).setPayChannelCode(payOrder.getChannelCode()));
+        }else{
+            updateCount = tradeOrderMapper.updateByIdAndStatus(id, order.getStatus(),
+                    new TradeOrderDO().setStatus(TradeOrderStatusEnum.UNDELIVERED.getStatus()).setPayStatus(true)
+                            .setPayTime(LocalDateTime.now()).setPayChannelCode(payOrder.getChannelCode()));
+        }
         if (updateCount == 0) {
             throw exception(ORDER_UPDATE_PAID_STATUS_NOT_UNPAID);
         }

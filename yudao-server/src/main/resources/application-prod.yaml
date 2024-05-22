@@ -55,10 +55,10 @@ spring:
   # Redis 配置。Redisson 默认的配置足够使用，一般不需要进行调优
   data:
     redis:
-      host: 127.0.0.1 # 地址
+      host: 172.16.23.19 # 地址
       port: 6379 # 端口
-      database: 1 # 数据库索引
-#    password: 123456 # 密码，建议生产环境开启
+      database: 6 # 数据库索引
+      password: X2V3peaU94tg # 密码，建议生产环境开启
 
 --- #################### 定时任务相关配置 ####################
 
@@ -173,8 +173,8 @@ yudao:
       - ${spring.boot.admin.context-path}/** # 不处理 Spring Boot Admin 的请求
       - ${management.endpoints.web.base-path}/** # 不处理 Actuator 的请求
   pay:
-    order-notify-url: http://wdd92z.natappfree.cc/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
-    refund-notify-url: http://wdd92z.natappfree.cc/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址
+    order-notify-url: http://2dpgmr.natappfree.cc/admin-api/pay/notify/order # 支付渠道的【支付】回调地址
+    refund-notify-url: http://2dpgmr.natappfree.cc/admin-api/pay/notify/refund # 支付渠道的【退款】回调地址
   demo: false # 开启演示模式
   tencent-lbs-key: TVDBZ-TDILD-4ON4B-PFDZA-RNLKH-VVF6E # QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
 

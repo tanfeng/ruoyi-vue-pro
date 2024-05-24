@@ -140,7 +140,8 @@ spring:
 # 日志文件配置
 logging:
   file:
-    name: ${user.home}/logs/${spring.application.name}.log # 日志文件名，全路径
+    name: /work/projects/yudao-server/logs/${spring.application.name}.log
+
 
 --- #################### 微信公众号相关配置 ####################
 wx: # 参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-starters/wx-java-mp-spring-boot-starter/README.md 文档
@@ -189,7 +190,7 @@ justauth:
       client-id: wwd411c69a39ad2e54
       client-secret: 1wTb7hYxnpT2TUbIeHGXGo7T0odav1ic10mLdyyATOw
       agent-id: 1000004
-      ignore-check-redirect-uri: true    
+      ignore-check-redirect-uri: true
     WECHAT_MINI_APP: # 微信小程序
       client-id: ${wx.miniapp.appid}
       client-secret: ${wx.miniapp.secret}
